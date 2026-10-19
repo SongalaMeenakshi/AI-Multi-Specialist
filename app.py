@@ -282,7 +282,7 @@ for message in st.session_state.messages:
 # ============================================================
 # 10. VOICE INPUT AND CHAT INPUT
 # ============================================================
-```python
+
 st.subheader("🎤 Speak Your Problem")
 
 language = st.selectbox(
@@ -310,7 +310,9 @@ if recorded_audio:
         type="primary",
         key="send_voice"
     ):
-        with st.spinner("Processing your voice... / మీ వాయిస్‌ను మారుస్తున్నాం..."):
+        with st.spinner(
+            "Processing your voice... / మీ వాయిస్‌ను మారుస్తున్నాం..."
+        ):
             try:
                 response = client.models.generate_content(
                     model=MODEL_NAME,
@@ -334,17 +336,19 @@ if recorded_audio:
                 if transcribed_text:
                     st.session_state["voice_text"] = transcribed_text
                     st.session_state.pop("recorded_audio", None)
+
                     st.success("Voice converted successfully!")
                     st.write("Your message:", transcribed_text)
+
                     st.rerun()
+
                 else:
-                    st.warning("No speech detected. Please record again.")
+                    st.warning(
+                        "No speech detected. Please record again."
+                    )
 
             except Exception as e:
                 st.error(f"Voice processing failed: {e}")
-
-```
-
 
 
 typed_message = st.chat_input(
