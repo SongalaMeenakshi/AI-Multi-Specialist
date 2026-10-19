@@ -289,27 +289,33 @@ language = st.selectbox(
     ["English", "తెలుగు (Telugu)"]
 )
 
+# Track whether the user has deleted the current recording
+if "voice_deleted" not in st.session_state:
+    st.session_state["voice_deleted"] = False
+
 audio = mic_recorder(
     start_prompt="🎙️ Start Recording / రికార్డింగ్ ప్రారంభించండి",
     stop_prompt="⏹️ Stop Recording / రికార్డింగ్ ఆపండి",
     key="voice_recorder"
 )
 
-# Save recording in session state
+# Save new recordings unless the previous recording was deleted
 if audio and audio.get("bytes"):
-    st.session_state["recorded_audio"] = audio
+    if not st.session_state["voice_deleted"]:
+        st.session_state["recorded_audio"] = audio
+    else:
+        # Allow a new recording when the component returns new audio
+        if audio.get("bytes") != st.session_state.get("deleted_audio_bytes"):
+            st.session_state["recorded_audio"] = audio
+            st.session_state["voice_deleted"] = False
 
 recorded_audio = st.session_state.get("recorded_audio")
 
 if recorded_audio:
-    st.audio(
-        recorded_audio["bytes"],
-        format="audio/wav"
-    )
+    st.audio(recorded_audio["bytes"], format="audio/wav")
 
     col1, col2 = st.columns(2)
 
-    # SEND VOICE BUTTON
     with col1:
         if st.button(
             "📤 Send Voice / వాయిస్ పంపండి",
@@ -334,19 +340,18 @@ if recorded_audio:
                     )
 
                     transcribed_text = (
-                        response.text.strip()
-                        if response.text else ""
+                        response.text.strip() if response.text else ""
                     )
 
                     if transcribed_text:
                         st.session_state["voice_text"] = transcribed_text
                         st.session_state.pop("recorded_audio", None)
+                        st.session_state["voice_deleted"] = False
 
                         st.success("Voice converted successfully!")
                         st.write("Your message:", transcribed_text)
 
                         st.rerun()
-
                     else:
                         st.warning(
                             "No speech detected. Please record again."
@@ -355,17 +360,16 @@ if recorded_audio:
                 except Exception as e:
                     st.error(f"Voice processing failed: {e}")
 
-    # DELETE RECORDING BUTTON
     with col2:
         if st.button(
             "🗑️ Delete Recording / రికార్డింగ్ తొలగించు",
             key="delete_voice"
         ):
+            st.session_state["deleted_audio_bytes"] = recorded_audio["bytes"]
             st.session_state.pop("recorded_audio", None)
+            st.session_state["voice_deleted"] = True
             st.rerun()
 
-
-# TEXT CHAT INPUT
 typed_message = st.chat_input(
     "Type your question / మీ ప్రశ్నను టైప్ చేయండి..."
 )
