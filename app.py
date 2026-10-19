@@ -278,7 +278,6 @@ for message in st.session_state.messages:
         st.write(
             message["content"]
         )
-
 # ============================================================
 # 10. VOICE INPUT AND CHAT INPUT
 # ============================================================
@@ -296,61 +295,77 @@ audio = mic_recorder(
     key="voice_recorder"
 )
 
-# Save the recording so it survives Streamlit reruns
+# Save recording in session state
 if audio and audio.get("bytes"):
     st.session_state["recorded_audio"] = audio
 
 recorded_audio = st.session_state.get("recorded_audio")
 
 if recorded_audio:
-    st.audio(recorded_audio["bytes"], format="audio/wav")
+    st.audio(
+        recorded_audio["bytes"],
+        format="audio/wav"
+    )
 
-    if st.button(
-        "📤 Send Voice / వాయిస్ పంపండి",
-        type="primary",
-        key="send_voice"
-    ):
-        with st.spinner(
-            "Processing your voice... / మీ వాయిస్‌ను మారుస్తున్నాం..."
+    col1, col2 = st.columns(2)
+
+    # SEND VOICE BUTTON
+    with col1:
+        if st.button(
+            "📤 Send Voice / వాయిస్ పంపండి",
+            type="primary",
+            key="send_voice"
         ):
-            try:
-                response = client.models.generate_content(
-                    model=MODEL_NAME,
-                    contents=[
-                        types.Part.from_bytes(
-                            data=recorded_audio["bytes"],
-                            mime_type="audio/wav"
-                        ),
-                        (
-                            f"Transcribe the spoken audio in {language}. "
-                            "Preserve the language spoken. "
-                            "Return only the transcribed words."
-                        )
-                    ]
-                )
-
-                transcribed_text = (
-                    response.text.strip() if response.text else ""
-                )
-
-                if transcribed_text:
-                    st.session_state["voice_text"] = transcribed_text
-                    st.session_state.pop("recorded_audio", None)
-
-                    st.success("Voice converted successfully!")
-                    st.write("Your message:", transcribed_text)
-
-                    st.rerun()
-
-                else:
-                    st.warning(
-                        "No speech detected. Please record again."
+            with st.spinner("Processing your voice..."):
+                try:
+                    response = client.models.generate_content(
+                        model=MODEL_NAME,
+                        contents=[
+                            types.Part.from_bytes(
+                                data=recorded_audio["bytes"],
+                                mime_type="audio/wav"
+                            ),
+                            (
+                                f"Transcribe the spoken audio in {language}. "
+                                "Preserve the language spoken. "
+                                "Return only the transcribed words."
+                            )
+                        ]
                     )
 
-            except Exception as e:
-                st.error(f"Voice processing failed: {e}")
+                    transcribed_text = (
+                        response.text.strip()
+                        if response.text else ""
+                    )
+
+                    if transcribed_text:
+                        st.session_state["voice_text"] = transcribed_text
+                        st.session_state.pop("recorded_audio", None)
+
+                        st.success("Voice converted successfully!")
+                        st.write("Your message:", transcribed_text)
+
+                        st.rerun()
+
+                    else:
+                        st.warning(
+                            "No speech detected. Please record again."
+                        )
+
+                except Exception as e:
+                    st.error(f"Voice processing failed: {e}")
+
+    # DELETE RECORDING BUTTON
+    with col2:
+        if st.button(
+            "🗑️ Delete Recording / రికార్డింగ్ తొలగించు",
+            key="delete_voice"
+        ):
+            st.session_state.pop("recorded_audio", None)
+            st.rerun()
 
 
+# TEXT CHAT INPUT
 typed_message = st.chat_input(
     "Type your question / మీ ప్రశ్నను టైప్ చేయండి..."
 )
@@ -359,6 +374,7 @@ if typed_message:
     user_message = typed_message
 else:
     user_message = st.session_state.pop("voice_text", None)
+
 
 # ============================================================
 # 11. CHAT RESPONSE
