@@ -14,7 +14,7 @@ from streamlit_mic_recorder import mic_recorder
 st.set_page_config(
     page_title="AI Medical & Agriculture Assistant",
     page_icon="🩺",
-    layout="wide"
+    layout="centered"
 )
 
 
