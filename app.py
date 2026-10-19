@@ -282,7 +282,7 @@ for message in st.session_state.messages:
 # ============================================================
 # 10. VOICE INPUT AND CHAT INPUT
 # ============================================================
-
+```python
 st.subheader("🎤 Speak Your Problem")
 
 language = st.selectbox(
@@ -296,22 +296,27 @@ audio = mic_recorder(
     key="voice_recorder"
 )
 
-if audio:
-    st.audio(audio["bytes"], format="audio/wav")
+# Save the recording so it survives Streamlit reruns
+if audio and audio.get("bytes"):
+    st.session_state["recorded_audio"] = audio
 
-    st.info(
-        "Voice recorded successfully! "
-        "మీ వాయిస్ రికార్డ్ అయింది!"
-    )
+recorded_audio = st.session_state.get("recorded_audio")
 
-    if st.button("📤 Send Voice / వాయిస్ పంపండి", type="primary"):
+if recorded_audio:
+    st.audio(recorded_audio["bytes"], format="audio/wav")
+
+    if st.button(
+        "📤 Send Voice / వాయిస్ పంపండి",
+        type="primary",
+        key="send_voice"
+    ):
         with st.spinner("Processing your voice... / మీ వాయిస్‌ను మారుస్తున్నాం..."):
             try:
                 response = client.models.generate_content(
                     model=MODEL_NAME,
                     contents=[
                         types.Part.from_bytes(
-                            data=audio["bytes"],
+                            data=recorded_audio["bytes"],
                             mime_type="audio/wav"
                         ),
                         (
@@ -323,20 +328,23 @@ if audio:
                 )
 
                 transcribed_text = (
-                    response.text.strip()
-                    if response.text
-                    else ""
+                    response.text.strip() if response.text else ""
                 )
 
                 if transcribed_text:
                     st.session_state["voice_text"] = transcribed_text
+                    st.session_state.pop("recorded_audio", None)
                     st.success("Voice converted successfully!")
                     st.write("Your message:", transcribed_text)
+                    st.rerun()
                 else:
                     st.warning("No speech detected. Please record again.")
 
             except Exception as e:
                 st.error(f"Voice processing failed: {e}")
+
+```
+
 
 
 typed_message = st.chat_input(
